@@ -2,7 +2,7 @@
 
 ################################################################################
 #                                                                              #
-#  B Tree:                                                                     #
+#  B Tree                                                                      #
 #                                                                              #
 #  Instituto Federal de Minas Gerais - Campus Formiga, 2019                    #
 #                                                                              #
