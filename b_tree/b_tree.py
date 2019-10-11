@@ -71,21 +71,16 @@ class Node():
         print("\n\n--> Inserting " + str(key) + " on: " + str(self))
 
 
-        # When there's no room to insert new key AND it's leaf.
-        if (None not in self.keys) and (self.__has_pages_attached__() == False):
-            key_to_promote, left_page, right_page = self.__split__(key)
+        # When there's no room to insert new key AND it's leaf. Split is needed.
+        if None not in self.keys and self.__is_leaf__():
+            new_tree = self.__split__(key)
 
-            if self.root is False:
-                # When this is not root, return the key that will be attached to the root and the pages within.
-                return key_to_promote, left_page, right_page
-            else:
-                # When the current node is root, create new node that will turn into new root.
-                # Tree growing up.
-                new_node = Node(self.order, key_to_promote, True)
-                new_node.insert_page("L", key_to_promote, left_page)
-                new_node.insert_page("R", key_to_promote, right_page)
+            # When the current node is root, the tree is growing upwards.
+            if self.root is True:
                 self.root = False
-                return new_node
+                new_tree.root = True
+
+            return new_tree
 
 
         for i in range(self.n_keys):
@@ -101,11 +96,25 @@ class Node():
                 return self
 
             if key < self.keys[i]:
-                # If there's a page in LEFT side of currrent key, go to that page.
-                page_index = self.__get_page_index__("L", self.keys[i])
-                if self.pages[page_index] is not None:
+                # When it's leaf but there's a element in the position. Shift right is needed.
+                if self.__is_leaf__():
+                    self.__shift__("R", self.keys[i]) #                         TODO: AND WHEN THERE'S NO ROOM TO SHIFT?
+                    self.keys[i] = key
+                    # Return the current node because the key was inserted with success.
+                    return self
+                else:
+                    # When it's not leaf, there's a page in LEFT side of currrent key.
+                    # Go to that page.
+                    page_index = self.__get_page_index__("L", self.keys[i])
+                    new_node = self.pages[page_index].insert(key)
 
-                    page_insert_return = [self.pages[page_index].insert(key)]
+                    # When split NOT happens.
+                    if new_node.__is_leaf__():
+                        return self
+                    else:
+                        # When split happens, the key on root has to be inserted on current page,
+                        # and his pages as well.
+
 
                     if len(page_insert_return) == 3:
                         #return key_to_promote, left_page, right_page
@@ -120,13 +129,8 @@ class Node():
                     else:
                         # When there's only one value, it's the new root created.
                         return page_insert_return[0]
-                
-                # When there's no page to go.
-                else:
-                    self.__shift__("R", self.keys[i])
-                    self.keys[i] = key
-                    # Return the current node because the key was inserted with success.
-                    return self
+
+        # When it didin't find space to insert, it means that key will be inserted into last page.
 
     def insert_page(self, side, key, page):
         '''Insert the "page" in the "side" of "key".
@@ -166,11 +170,11 @@ class Node():
     def __split__(self, key):
         ''' Split the current leaf node in the key position and return new root created.'''
 
-        print("Splitting the node:", self)
+        print("Splitting the leaf:", self)
 
         self.keys.append(key)
         self.keys.sort()
-        
+
         half_keys = len(self.keys)//2
 
         key_to_promote = self.keys.pop(half_keys)
@@ -200,11 +204,11 @@ class Node():
 
         return None
 
-    def __has_pages_attached__(self):
+    def __is_leaf__(self):
         for page in self.pages:
             if page is not None:
-                return True
-        return False
+                return False
+        return True
 
     def __str__(self):
         result = "["
