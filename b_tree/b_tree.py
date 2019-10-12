@@ -24,7 +24,8 @@ class BTree():
     def run(self):
         ''' Method docstring.'''
 
-        numbers = [1, 2, 3, 4, 5, 6, 7, 10, 12, 13, 13, 13, 13]
+        #numbers = [1, 2, 3, 4, 5, 6, 7, 10, 12, 13, 13, 13, 13]
+        numbers = [51, 94, 71, 13, 78, 43, 77, 0, 83, 84, 0, 3, 32]#, 29, 45, 21, 24, 33, 22, 81, 94, 98, 85, 5, 12, 53, 78, 77, 24, 42]
 
         #for num in numbers_to_insert:
         for i in range(len(numbers)):
@@ -32,7 +33,8 @@ class BTree():
             self.show()
             result = "Value " + str(numbers[i]) + " inserted. (Next value: " + str(numbers[i+1]) + ")"
             print(result)
-            input()
+            #input()
+        self.show()
 
     def insert(self, key):
         ''' Insert the "key" value in current B Tree.'''
@@ -131,7 +133,7 @@ class Node():
 
                     # When split happens, attach the key and pages into current page.
                     if new_page.__is_leaf__() is False:
-                        # What we have is a root page, with one key and two pages attached.
+                        # What we have in new_page is a root page, with one key and two pages attached.
                         #                                                       TODO: AND WHEN THERE'S NO ROOM TO SHIFT?
                         self.__shift__("R", self.keys[i])
                         # Insert the new_page (which is root) into the new allocated position.
@@ -188,41 +190,42 @@ class Node():
         if None not in self.keys:
             return False
 
+        if self.__is_leaf__():
+            # Removing the first occurence of None from keys list.
+            self.keys.remove(None)
 
-        # Removing the first occurence of None from keys list.
-        self.keys.remove(None)
+            if side == "L":                                                 # NEVER ENTERING HERE.
+                # Now putting the None in the last position.
+                self.keys.append(None)
 
-        if side == "L":                                                     # NEVER ENTERING HERE.
-            # Now putting the None in the last position.
-            self.keys.append(None)
+            elif side == "R":
+                # Now putting the None in the correct position.
+                key_index = self.keys.index(key)
+                self.keys = self.keys[:key_index] + [None] + self.keys[key_index:]
 
-        elif side == "R":
-            # Now putting the None in the correct position.
-            key_index = self.keys.index(key)
-            self.keys = self.keys[:key_index] + [None] + self.keys[key_index:]
-
-
-        # Shifting the pages attached to the non leaf page.
-        if self.__is_leaf__() is False:
+        else: # Shifting the pages attached to the non leaf page too.
 
             # Removing the first occurence of None on pages list.
+            self.keys.remove(None)
             self.pages.remove(None)
 
             if side == "L":                                                     # NEVER ENTERING HERE.
-                # Now putting the None in the last position.
+                self.keys.append(None)
                 self.pages.append(None)
 
             elif side == "R":
-                # Silicing the pages list, removing the old page and putting Nones inside.
                 key_index = self.keys.index(key)
+
+                # Now putting the None in the correct position.
+                self.keys = self.keys[:key_index] + [None] + self.keys[key_index:]
+
+                # Silicing the pages list, removing the old page and putting Nones inside.
                 self.pages = self.pages[:key_index] + [None, None] + self.pages[key_index+1:]
 
         return True
 
     def __split__(self, key):
         ''' Split the current leaf node in the key position and return new root created.'''
-
-        #print("Splitting the leaf:", self)
 
         self.keys.append(key)
         self.keys.sort()
@@ -282,14 +285,13 @@ class Node():
         else:
             result = "\t" * level
 
-        result += "["
-        for i in range(self.n_keys-1):
-            result += str(self.keys[i]) + " "
-        result += str(self.keys[i+1]) + "]"
+        result += self.__str__() + "\n"
 
         for i in range(self.n_pages):
             if self.pages[i] is not None:
-                result += self.pages[i].__complete_str__(level + 1)
+                result += str(i) + ":" + self.pages[i].__complete_str__(level + 1)
+                #result += self.pages[i].__complete_str__(level + 1)
+            #else:
+                #result += str(i) + ":" + self.pages[i].__complete_str__(level + 1)
 
-        return "\n" + result
-
+        return result
