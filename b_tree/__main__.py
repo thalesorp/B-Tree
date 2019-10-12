@@ -17,8 +17,9 @@
 from b_tree import BTree # pylint: disable=no-name-in-module,no-absolute-import
 
 def main():
-    '''Main.'''
-    b_tree = BTree()
+    ''' Method docstring.'''
+
+    b_tree = BTree(2)
     b_tree.run()
 
 if __name__ == '__main__':
