@@ -24,37 +24,28 @@ class BTree():
     def run(self):
         ''' Method docstring.'''
 
-        #numbers_to_insert = [11, 36, 53, 95, 8]
+        numbers = [1, 2, 3, 4, 5, 6, 7, 10, 12, 13, 13, 13, 13]
 
-        #numbers_to_insert = [1, 3, 4, 7, 8, 15, 10, 12, 13, 14, 18, 20, 25, 29, 37,
-        #                     45, 60, 30, 35, 40, 41, 42, 43, 51, 52, 70, 77, 83]
-
-        #numbers_to_insert = [1, 7, 6, 2, 11, 4, 8, 5, 15, 3, 12]
-
-        #numbers_to_insert = [3, 10, 13, 4, 5, 6, 7, 12, 1, 2]
-
-        numbers_to_insert = [1, 2, 3, 4, 5, 6, 7, 10, 12, 13]
-
-        for num in numbers_to_insert:
-            self.insert(num)
-            insert = "Value " + str(num) + " inserted."
-            print(insert)
+        #for num in numbers_to_insert:
+        for i in range(len(numbers)):
+            self.insert(numbers[i])
+            self.show()
+            result = "Value " + str(numbers[i]) + " inserted. (Next value: " + str(numbers[i+1]) + ")"
+            print(result)
             input()
 
     def insert(self, key):
-        ''' Method docstring.'''
+        ''' Insert the "key" value in current B Tree.'''
 
-        keys = [None] * self.order * 2
+        keys = [None] * (self.order * 2)
         keys[0] = key
         page = Node(self.order, keys)
 
         self.root = self.root.insert(page)
 
-        self.show()
-
     def show(self):
-        ''' Method docstring.'''
-        #print("\nFinally: ")
+        ''' Show the current B Tree.'''
+
         print(self.root.__complete_str__())
 
 
@@ -64,10 +55,6 @@ class Node():
     def __init__(self, order, keys=None, root=None):
         self.order = order
 
-        self.root = root
-        if self.root is None:
-            self.root = False
-
         self.n_keys = self.order * 2
         self.n_pages = self.n_keys + 1
 
@@ -75,33 +62,54 @@ class Node():
         if self.keys is None:
             self.keys = [None] * self.n_keys
 
+        self.root = root
+        if self.root is None:
+            self.root = False
+
         self.pages = [None] * self.n_pages
 
     def insert(self, page):
-        ''' Method docstring.'''
+        ''' Insert the "page" in the the page according to the B Tree rules.'''
 
         key = page.keys[0]
 
-        #print("\n\n--> Inserting " + str(key) + " on: " + str(self))
+        # If the key is already in, do nothing.
+        if key in self.keys:
+            return self
 
-        # When there's no room to insert new key AND it's leaf. Split is needed.
+        # When there's no room to insert new key and it's leaf.
         if None not in self.keys and self.__is_leaf__():
             # Spliting the current page.
             # When the current node is root, the tree is growing upwards.
             return self.__split__(key)
 
-
         for i in range(self.n_keys):
 
-            # When there's no one in that position, insert the key right there.
             if self.keys[i] is None:
-                self.keys[i] = key
+                # If there's a left page, go there.
+                page_index = self.__get_page_index__("L", i)
+                if self.pages[page_index] is not None:
+                    new_page = self.pages[page_index].insert(page)
+
+                    # When split happens, attach the key and pages into current page.
+                    if new_page.__is_leaf__() is False:
+                        # What we have is a root page, with one key and two pages attached.
+                        #                                                       TODO: AND WHEN THERE'S NO ROOM TO SHIFT?
+                        self.__shift__("R", self.keys[i])
+                        # Insert the new_page (which is root) into the new allocated position.
+                        new_key = new_page.keys[0]
+                        left_page = new_page.pages[0]
+                        right_page = new_page.pages[1]
+                        self.keys[i] = new_key
+                        self.__insert_page__("L", new_key, left_page)
+                        self.__insert_page__("R", new_key, right_page)
+                else:
+                    # In case there's no pages to go, here's the place to put the key.
+                    self.keys[i] = key
+
                 # Return the current node because the key was inserted with success.
                 return self
 
-            # If the key is found, return the current node because he is already in.
-            if self.keys[i] == key:
-                return self
 
             if key < self.keys[i]:
                 # When what i'm trying to insert is root, it means that shift right is needad
@@ -118,7 +126,7 @@ class Node():
                 else:
                     # When it's not leaf, there's a page in LEFT side of currrent key.
                     # Go to that page.
-                    page_index = self.__get_page_index__("L", self.keys[i])
+                    page_index = self.__get_page_index__("L", i)
                     new_page = self.pages[page_index].insert(page)
 
                     # When split happens, attach the key and pages into current page.
@@ -131,15 +139,17 @@ class Node():
                         left_page = new_page.pages[0]
                         right_page = new_page.pages[1]
                         self.keys[i] = new_key
-                        self.insert_page("L", new_key, left_page)
-                        self.insert_page("R", new_key, right_page)
+                        self.__insert_page__("L", new_key, left_page)
+                        self.__insert_page__("R", new_key, right_page)
 
                     return self
 
         # When it didin't find space to insert, it means that key will be inserted into last page.
 
-        # We know that isn't leaf. Going to page in RIGHT side.
-        page_index = self.__get_page_index__("R", self.keys[i])
+        print("------------------------------DANGEROUS ZONE!------------------------------")
+
+        # We know that isn't leaf. Going to the page in RIGHT side.
+        page_index = self.__get_page_index__("R", i)
         new_page = self.pages[page_index].insert(page)
 
         # When split happens, attach the key and pages into current page.
@@ -152,12 +162,12 @@ class Node():
             left_page = new_page.pages[0]
             right_page = new_page.pages[1]
             self.keys[i] = new_key
-            self.insert_page("L", new_key, left_page)
-            self.insert_page("R", new_key, right_page)
+            self.__insert_page__("L", new_key, left_page)
+            self.__insert_page__("R", new_key, right_page)
 
         return self
 
-    def insert_page(self, side, key, page):
+    def __insert_page__(self, side, key, page):
         '''Insert the "page" in the "side" of "key".
         If side is "L", "page" is inserted on left side of key.
         If side is "E", "page" is inserted on right side of key.'''
@@ -233,33 +243,39 @@ class Node():
         keys[0] = key_to_promote
         new_root = Node(self.order, keys, True)
 
-        new_root.insert_page("L", key_to_promote, left_page)
-        new_root.insert_page("R", key_to_promote, right_page)
+        new_root.__insert_page__("L", key_to_promote, left_page)
+        new_root.__insert_page__("R", key_to_promote, right_page)
 
         return new_root
 
-    def __get_page_index__(self, side, key):
-        ''' Return the index of page in the "side" of the key.'''
-
-        key_index = self.keys.index(key)
-
-        if side == "L":
-            if key_index == 0:
-                return 0
-            return key_index-1
+    def __get_page_index__(self, side, key_index):
+        ''' Return the index of page in the "side" of the key in "key_index" position of keys list.'''
 
         if side == "R":
             return key_index+1
 
+        if side == "L":
+            return key_index
+
         return None
 
     def __is_leaf__(self):
+        ''' Return True if the current page is leaf. If isn't, return False.'''
+
         for page in self.pages:
             if page is not None:
                 return False
         return True
 
-    def __str__(self, level=0):
+    def __str__(self):
+        result = "["
+        for i in range(len(self.keys)-1):
+            result += str(self.keys[i]) + " "
+        result += str(self.keys[i+1]) + "]"
+
+        return result
+
+    def __complete_str__(self, level=0):
 
         if level == 0:
             result = "Root: "
@@ -273,10 +289,7 @@ class Node():
 
         for i in range(self.n_pages):
             if self.pages[i] is not None:
-                result += self.pages[i].__str__(level + 1)
+                result += self.pages[i].__complete_str__(level + 1)
 
         return "\n" + result
-
-    def __complete_str__(self):
-        return self.__str__()
 
