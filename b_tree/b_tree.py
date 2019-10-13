@@ -75,12 +75,11 @@ class Node():
         key = page.keys[0]
 
         # If the key is already in, do nothing.
-        if key in self.keys: # TODO: and page._is_leaf(): ?
+        if key in self.keys and page._is_leaf():
             return self
 
-        # When there's no room to insert new key and it's leaf.
+        # When there's no room to insert new key and it's leaf, split the current page.
         if None not in self.keys and self._is_leaf():
-            # Spliting the current page.
             # When the current node is root, the tree is growing upwards.
             return self._split(page)
 
@@ -93,40 +92,44 @@ class Node():
                     new_page = self._insert_into_page(self.LEFT, self.keys[i], page)
 
                     # When split happens, attach the key and pages into current page.
-                    if new_page._is_leaf() is False:
+                    if self._split_happened(new_page):
                         # What we have is a root page, with one key and two pages attached.
-                        if self._can_shift() is False:
-                            # Getting the split made in left page and putting on current page.
+
+                        # Getting the split made in left page and putting on current page.
+                        if self._full_page():
                             return self.insert(new_page)
 
                         if self.keys[i] is not None:
                             self._shift(self.RIGHT, self.keys[i])
-                        # Insert the new_page (which is root) into the new allocated position.
+
+                        # Insert the new page into the new allocated position.
                         new_key = new_page.keys[0]
                         left_page = new_page.pages[0]
                         right_page = new_page.pages[1]
                         self.keys[i] = new_key
                         self._insert_page(self.LEFT, new_key, left_page)
                         self._insert_page(self.RIGHT, new_key, right_page)
+
+                    # However, when split doesn't happend, the changes has already made in current page.
+
                 else:
                     # In case there's no pages to go, here's the place to put the key.
                     self.keys[i] = key
 
-                # Return the current node because the key was inserted with success.
+                # Return the current node because the page was inserted with success.
                 return self
 
 
             if key < self.keys[i]:
-                # When what i'm trying to insert is root, it means that shift right is needed
-                # and the pages of that root will be attached to current page.
-                #if page.root is True:
 
-                # When it's leaf but there's a element in the position. Shift right is needed.
                 if self._is_leaf():
-                    # TODO: AND WHEN THERE'S NO ROOM TO SHIFT?
+                    # When there's a element in current position, shift is needed.
+                    if self._full_page():
+                        # But if the current page is full, split is needed.
+                        return self._split(page)
+                    # When there's room to insert the key, perform a right shift.
                     self._shift(self.RIGHT, self.keys[i])
                     self.keys[i] = key
-                    # Return the current node because the key was inserted with success.
                     return self
 
                 # If there's a left page, go there.
@@ -134,34 +137,42 @@ class Node():
                     new_page = self._insert_into_page(self.LEFT, self.keys[i], page)
 
                     # When split happens, attach the key and pages into current page.
-                    if new_page._is_leaf() is False:
-                        # What we have in new_page is a root page, with one key and two pages attached.
-                        if self._can_shift() is False:
-                             # Getting the split made in left page and putting on current page.
+                    if self._split_happened(new_page):
+                        # What we have is a root page, with one key and two pages attached.
+
+                        # Getting the split made in left page and putting on current page.
+                        if self._full_page():
                             return self._split(new_page)
 
+                        # When there's a element in current position, shift is needed.
                         if self.keys[i] is not None:
                             self._shift(self.RIGHT, self.keys[i])
-                        # Insert the new_page (which is root) into the new allocated position.
+                        else:
+                            return("::::::::::::::::::::::::::::::::::::::: Caiu aqui!")
+
+                        # Insert the new page into the new allocated position.
                         new_key = new_page.keys[0]
                         left_page = new_page.pages[0]
                         right_page = new_page.pages[1]
                         self.keys[i] = new_key
                         self._insert_page(self.LEFT, new_key, left_page)
                         self._insert_page(self.RIGHT, new_key, right_page)
-                return self
 
+                    # However, when split doesn't happend, the changes has already made in current page.
+
+                return self
 
         # When it didin't find space to insert, it means that key will be inserted into last page.
 
         print("----------------------------UNTESTED ZONE!----------------------------")
 
-        # We know that isn't leaf. Inserting the page in the page on RIGHT side.
+        # We know that isn't leaf (How?). Inserting the page in the page on RIGHT side.
         new_page = self._insert_into_page(self.RIGHT, self.keys[i], page)
 
         # When split happens, attach the key and pages into current page.
-        if new_page._is_leaf() is False:
+        if self._split_happened(new_page):
             # What we have is a root page, with one key and two pages attached.
+
             # TODO: AND WHEN THERE'S NO ROOM TO SHIFT?
             self._shift(self.RIGHT, self.keys[i])
             # Insert the new_page (which is root) into the new allocated position.
@@ -216,7 +227,7 @@ class Node():
         return True
 
     def _split(self, page):
-        ''' Split the current page in the key position and return new root created.'''
+        ''' Add the "page" to current page, split it, and return a new page created.'''
 
         key = page.keys[0]
 
@@ -264,6 +275,14 @@ class Node():
 
         return new_root
 
+    def _split_happened(self, page):
+        ''' Check if the "page" was splitted.'''
+
+        none_quantity = page.keys.count(None)
+        if none_quantity == (page.n_keys-1): #and page._is_leaf() is False:
+            return True
+        return False
+
     def _insert_into_page(self, side, key, page):
         ''' Insert the "page" into the page "side" of "key".'''
 
@@ -306,6 +325,13 @@ class Node():
         if None in self.keys:
             return True
         return False
+
+    def _full_page(self):
+        ''' Checks if the current page is full. If there's space to insert a key, false is returned.'''
+
+        if None in self.keys:
+            return False
+        return True
 
     def _new_page(self, key):
         keys = [key] + ([None] * (self.n_keys - 1))
