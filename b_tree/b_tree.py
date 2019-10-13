@@ -70,29 +70,27 @@ class Node():
             self.root = False
 
     def insert(self, page):
-        ''' Insert the "page" in the the page according to the B Tree rules.'''
+        ''' Insert the "page" in the current page according to the B Tree rules.'''
 
         key = page.keys[0]
 
         # If the key is already in, do nothing.
-        if key in self.keys:
+        if key in self.keys: # TODO: and page._is_leaf(): ?
             return self
 
         # When there's no room to insert new key and it's leaf.
         if None not in self.keys and self._is_leaf():
             # Spliting the current page.
             # When the current node is root, the tree is growing upwards.
-
-            return self._split(self._new_page(key))
+            return self._split(page)
 
 
         for i in range(self.n_keys):
 
             if self.keys[i] is None:
                 # If there's a left page, go there.
-                page_index = self._get_page_index(self.LEFT, i)
-                if self.pages[page_index] is not None:
-                    new_page = self.pages[page_index].insert(page)
+                if self._has_page(self.LEFT, self.keys[i]):
+                    new_page = self._insert_into_page(self.LEFT, self.keys[i], page)
 
                     # When split happens, attach the key and pages into current page.
                     if new_page._is_leaf() is False:
@@ -132,9 +130,8 @@ class Node():
                     return self
 
                 # If there's a left page, go there.
-                page_index = self._get_page_index(self.LEFT, i)
-                if self.pages[page_index] is not None:
-                    new_page = self.pages[page_index].insert(page)
+                if self._has_page(self.LEFT, self.keys[i]):
+                    new_page = self._insert_into_page(self.LEFT, self.keys[i], page)
 
                     # When split happens, attach the key and pages into current page.
                     if new_page._is_leaf() is False:
@@ -159,9 +156,8 @@ class Node():
 
         print("----------------------------UNTESTED ZONE!----------------------------")
 
-        # We know that isn't leaf. Going to the page in RIGHT side.
-        page_index = self._get_page_index(self.RIGHT, i)
-        new_page = self.pages[page_index].insert(page)
+        # We know that isn't leaf. Inserting the page in the page on RIGHT side.
+        new_page = self._insert_into_page(self.RIGHT, self.keys[i], page)
 
         # When split happens, attach the key and pages into current page.
         if new_page._is_leaf() is False:
@@ -177,35 +173,6 @@ class Node():
             self._insert_page(self.RIGHT, new_key, right_page)
 
         return self
-
-    def _insert_page(self, side, key, page):
-        '''Insert the "page" in the "side" of "key".
-        If side is "L", "page" is inserted on left side of key.
-        If side is "R", "page" is inserted on right side of key.'''
-
-        # Getting the index of "key".
-        key_index = self.keys.index(key)
-        if side == self.LEFT:
-            self.pages[key_index] = page
-        if side == self.RIGHT:
-            self.pages[key_index + 1] = page
-
-    def _delete_page(self, side, key):
-        '''Delete the "page" in the "side" of "key".
-        If side is "L", the page deleted is the one on left side of key.
-        If side is "R", the page deleted is the one on right side of key.'''
-
-        key_index = self.keys.index(key)
-        page_index = self._get_page_index(side, key_index)
-
-        self.pages[page_index] = None
-
-    def _can_shift(self):
-        ''' Checking if there's space to move.'''
-
-        if None in self.keys:
-            return True
-        return False
 
     def _shift(self, side, key):
         ''' Shift to "side" the elements after "key", with "key" included.
@@ -297,6 +264,49 @@ class Node():
 
         return new_root
 
+    def _insert_into_page(self, side, key, page):
+        ''' Insert the "page" into the page "side" of "key".'''
+
+        page_index = self._get_page_index(side, key)
+        return self.pages[page_index].insert(page)
+
+    def _has_page(self, side, key):
+        ''' Check if there's a page in "side" of "key".'''
+
+        page_index = self._get_page_index(side, key)
+        if self.pages[page_index] is not None:
+            return True
+        return False
+
+    def _insert_page(self, side, key, page):
+        '''Insert the "page" in the "side" of "key".
+        If side is "L", "page" is inserted on left side of key.
+        If side is "R", "page" is inserted on right side of key.'''
+
+        key_index = self.keys.index(key)
+
+        if side == self.LEFT:
+            self.pages[key_index] = page
+
+        if side == self.RIGHT:
+            self.pages[key_index + 1] = page
+
+    def _delete_page(self, side, key):
+        '''Delete the "page" in the "side" of "key".
+        If side is "L", the page deleted is the one on left side of key.
+        If side is "R", the page deleted is the one on right side of key.'''
+
+        page_index = self._get_page_index(side, key)
+
+        self.pages[page_index] = None
+
+    def _can_shift(self):
+        ''' Checking if there's space to move.'''
+
+        if None in self.keys:
+            return True
+        return False
+
     def _new_page(self, key):
         keys = [key] + ([None] * (self.n_keys - 1))
         return Node(self.order, keys)
@@ -309,15 +319,16 @@ class Node():
                 return False
         return True
 
-    def _get_page_index(self, side, key_index):
-        ''' Return the index of page in the "side" of the key in "key_index"
-        position of keys list.'''
+    def _get_page_index(self, side, key):
+        ''' Return the index of page in the "side" of the "key".'''
 
-        if side == self.RIGHT:
-            return key_index+1
+        key_index = self.keys.index(key)
 
         if side == self.LEFT:
             return key_index
+
+        if side == self.RIGHT:
+            return key_index+1
 
         return None
 
