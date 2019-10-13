@@ -97,15 +97,10 @@ class Node():
                     # When split happens, attach the key and pages into current page.
                     if new_page._is_leaf() is False:
                         # What we have is a root page, with one key and two pages attached.
-                        # TODO: AND WHEN THERE'S NO ROOM TO SHIFT? MAYBE CHECK IF SHIFT IS NEEDED?
-
-
                         if self._can_shift() is False:
-                            #print("Shift CAN'T be made because current page is full.")
                             # Getting the split made in left page and putting on current page.
                             return self.insert(new_page)
                         
-                        #print("Shift CAN be made.")
                         if self.keys[i] is not None:
                             self._shift("R", self.keys[i])
                         # Insert the new_page (which is root) into the new allocated position.
@@ -141,30 +136,13 @@ class Node():
                 if self.pages[page_index] is not None:
                     new_page = self.pages[page_index].insert(page)
 
-                    #print("A")
-                    #print("self:", self._complete_str())
-                    #print("new_page:", new_page._complete_str())
-
                     # When split happens, attach the key and pages into current page.
                     if new_page._is_leaf() is False:
                         # What we have in new_page is a root page, with one key and two pages attached.
-                        # TODO: AND WHEN THERE'S NO ROOM TO SHIFT?
-
                         if self._can_shift() is False:
-                            print("Shift CAN'T be made because current page is full.")
                              # Getting the split made in left page and putting on current page.
+                            return self._split(new_page)
 
-                            print("Antes do split...")
-                            print("new_page:", new_page._complete_str(), "\n")
-                            print("self:", self._complete_str(), "\n")
-
-                            algo = self._split(new_page)
-                            print("Pós split...")
-                            print(algo)
-
-                            return algo
-
-                        print("Shift CAN be made.")
                         if self.keys[i] is not None:
                             self._shift("R", self.keys[i])
                         # Insert the new_page (which is root) into the new allocated position.
@@ -281,21 +259,22 @@ class Node():
 
         # Promote the middle key of current page.
         middle_key_index = len(self.keys)//2
-        promoted_key = self.keys.pop(middle_key_index)
+        promoted_key = self.keys[middle_key_index]
 
         new_keys = [promoted_key] + ([None] * (self.n_keys - 1))
         new_root = Node(self.order, new_keys, None, True)
 
-        # Splitting the keys into two new list keys: right and left. E.g.:
-        # keys=[1,2,3,4] -> left_keys=[1,2,None,None] and right_keys=[3,4,None,None]
+        # Splitting the keys into two new list keys: right and left.
+        # E.g.: keys = ["a", "b", "NEW", "c", "d"]
+        # left_keys = ["a", "b", None, None] and right_keys = ["c", "d", None, None]
         left_keys = self.keys[:middle_key_index] + ([None] * middle_key_index)
-        right_keys = self.keys[middle_key_index:] + ([None] * middle_key_index)
+        right_keys = self.keys[middle_key_index+1:] + ([None] * middle_key_index)
 
         left_page = Node(self.order, left_keys)
         right_page = Node(self.order, right_keys)
 
         # If the page isn't leaf: handling the pages.
-        if page._is_leaf():
+        if page._is_leaf() is False:
             right_page = page.pages[0]
             left_page = page.pages[1]
 
@@ -304,8 +283,8 @@ class Node():
             self.pages.pop(page_index)
 
             # Inserting the new pages (the resulting ones of last leaf split) on the position of the deleted page.
-            self.pages.insert(page_index, right_page)
             self.pages.insert(page_index, left_page)
+            self.pages.insert(page_index, right_page)
 
             left_pages = self.pages[:middle_key_index+1] + ([None] * (middle_key_index) )
             right_pages = self.pages[middle_key_index+1:] + ([None] * (middle_key_index) )
@@ -366,3 +345,6 @@ class Node():
                 result += str(i) + ":" + self.pages[i]._complete_str(level + 1)
 
         return result
+
+
+numbers = [33, 50, 50, 29, 26, 12, 44, 70, 56, 90, 60, 92, 87, 75, 89, 55, 43, 15, 26, 57, 8, 100, 96, 39,    13] #, 21, 45, 41, 84, 35]
