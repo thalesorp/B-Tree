@@ -22,7 +22,7 @@ class BTree():
         self.root = Page(self.order, None, None, True)
 
     def run(self):
-        ''' Method docstring.'''
+        ''' Method used to test.'''
 
         numbers = [33, 50, 50, 29, 26, 12, 44, 70, 56, 90, 60, 92, 87, 75, 89, 55, 43, 15, 26, 57, 8, 100, 96, 39, 13, 21, 101]#, 45, 41, 84, 35]
         for number in numbers:
@@ -33,8 +33,7 @@ class BTree():
     def insert(self, key):
         ''' Insert the "key" value in current B Tree.'''
 
-        keys = [None] * (self.order * 2)
-        keys[0] = key
+        keys = [key] + ([None] * ((self.order * 2)-1))
         page = Page(self.order, keys)
 
         self.root = self.root.insert(page)
@@ -96,12 +95,11 @@ class Page():
                         # What we have is a root page, with one key and two pages attached.
 
                         # Getting the split made in left page and putting on current page.
-                        if self._full_page():
+                        if self._is_page_full():
                             return self.insert(new_page)
 
                         # When there's a element in current position, shift is needed.
-                        if self.keys[i] is not None:
-                            self._shift(self.RIGHT, self.keys[i])
+                        self._shift(self.keys[i])
 
                         # Insert the new page into the new allocated position.
                         new_key = new_page.keys[0]
@@ -124,11 +122,12 @@ class Page():
 
                 if self._is_leaf():
                     # When there's a element in current position, shift is needed.
-                    if self._full_page():
+                    if self._is_page_full():
                         # But if the current page is full, split is needed.
                         return self._split(page)
+
                     # When there's room to insert the key, perform a right shift.
-                    self._shift(self.RIGHT, self.keys[i])
+                    self._shift(self.keys[i])
                     self.keys[i] = key
                     return self
 
@@ -141,12 +140,11 @@ class Page():
                         # What we have is a root page, with one key and two pages attached.
 
                         # Getting the split made in left page and putting on current page.
-                        if self._full_page():
+                        if self._is_page_full():
                             return self._split(new_page)
 
                         # When there's a element in current position, shift is needed.
-                        if self.keys[i] is not None:
-                            self._shift(self.RIGHT, self.keys[i])
+                        self._shift(self.keys[i])
 
                         # Insert the new page into the new allocated position.
                         new_key = new_page.keys[0]
@@ -170,12 +168,11 @@ class Page():
             # What we have is a root page, with one key and two pages attached.
 
             # Getting the split made in right page and putting on current page.
-            if self._full_page():
+            if self._is_page_full():
                 return self._split(new_page)
 
             # When there's a element in current position, shift is needed.
-            if self.keys[i] is not None:
-                self._shift(self.RIGHT, self.keys[i])
+            self._shift(self.keys[i])
 
             # Insert the new page into the new allocated position.
             new_key = new_page.keys[0]
@@ -187,44 +184,26 @@ class Page():
 
         return self
 
-    def _shift(self, side, key):
+    def _shift(self, key):
         ''' Shift to "side" the elements after "key", with "key" included.'''
 
-        if self._is_leaf():
-            # Removing the first occurence of None from keys list.
-            self.keys.remove(None)
+        if key is None:
+            return False
 
-            # TODO: NEVER ENTERING HERE.
-            if side == self.LEFT:
-                print("???????????????????????????????????????????????????????????????????????????????????????????????")
-                # Now putting the None in the last position.
-                self.keys.append(None)
+        # Removing the first occurence of None from keys list.
+        self.keys.remove(None)
 
-            elif side == self.RIGHT:
-                # Now putting the None in the correct position.
-                key_index = self.keys.index(key)
-                self.keys = self.keys[:key_index] + [None] + self.keys[key_index:]
+        # Now putting the None in the correct position.
+        key_index = self.keys.index(key)
 
-        else: # Shifting the pages attached to the non leaf page too.
+        # Now putting the None in the correct position.
+        self.keys = self.keys[:key_index] + [None] + self.keys[key_index:]
 
-            # Removing the first occurence of None on pages list.
-            self.keys.remove(None)
+        # Shifting the pages attached to the non leaf page too.
+        if self._is_leaf() is False:
             self.pages.remove(None)
-
-            # TODO: NEVER ENTERING HERE.
-            if side == self.LEFT:
-                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                self.keys.append(None)
-                self.pages.append(None)
-
-            elif side == self.RIGHT:
-                key_index = self.keys.index(key)
-
-                # Now putting the None in the correct position.
-                self.keys = self.keys[:key_index] + [None] + self.keys[key_index:]
-
-                # Silicing the pages list, removing the old page and putting Nones inside.
-                self.pages = self.pages[:key_index] + [None, None] + self.pages[key_index+1:]
+            # Silicing the pages list, removing the old page and putting Nones inside.
+            self.pages = self.pages[:key_index] + [None, None] + self.pages[key_index+1:]
 
         return True
 
@@ -277,13 +256,17 @@ class Page():
 
         return new_root
 
-    def _split_happened(self, page):
-        ''' Check if the "page" was splitted.'''
+    # Utils.
+    def _insert_page(self, side, key, page):
+        '''Insert the "page" in the "side" of "key".'''
 
-        none_quantity = page.keys.count(None)
-        if none_quantity == (page.n_keys-1) and page._is_leaf() is False:
-            return True
-        return False
+        key_index = self.keys.index(key)
+
+        if side == self.LEFT:
+            self.pages[key_index] = page
+
+        if side == self.RIGHT:
+            self.pages[key_index + 1] = page
 
     def _insert_into_page(self, side, key, page):
         ''' Insert the "page" into the page "side" of "key".'''
@@ -299,16 +282,9 @@ class Page():
             return True
         return False
 
-    def _insert_page(self, side, key, page):
-        '''Insert the "page" in the "side" of "key".'''
-
-        key_index = self.keys.index(key)
-
-        if side == self.LEFT:
-            self.pages[key_index] = page
-
-        if side == self.RIGHT:
-            self.pages[key_index + 1] = page
+    def _new_page(self, key):
+        keys = [key] + ([None] * (self.n_keys - 1))
+        return Page(self.order, keys)
 
     def _delete_page(self, side, key):
         '''Delete the "page" in the "side" of "key".'''
@@ -316,25 +292,6 @@ class Page():
         page_index = self._get_page_index(side, key)
 
         self.pages[page_index] = None
-
-    def _full_page(self):
-        ''' Checks if the current page is full. If there's space to insert a key, false is returned.'''
-
-        if None in self.keys:
-            return False
-        return True
-
-    def _new_page(self, key):
-        keys = [key] + ([None] * (self.n_keys - 1))
-        return Page(self.order, keys)
-
-    def _is_leaf(self):
-        ''' Return True if the current page is leaf. If isn't, return False.'''
-
-        for page in self.pages:
-            if page is not None:
-                return False
-        return True
 
     def _get_page_index(self, side, key):
         ''' Return the index of page in the "side" of the "key".'''
@@ -348,6 +305,30 @@ class Page():
             return key_index+1
 
         return None
+
+    def _is_page_full(self):
+        ''' Checks if the current page is full. If there's space to insert a key, false is returned.'''
+
+        if None in self.keys:
+            return False
+        return True
+
+    def _is_leaf(self):
+        ''' Return True if the current page is leaf. If isn't, return False.'''
+
+        for page in self.pages:
+            if page is not None:
+                return False
+        return True
+
+    @staticmethod
+    def _split_happened(page):
+        ''' Check if the "page" was splitted.'''
+
+        none_quantity = page.keys.count(None)
+        if none_quantity == (page.n_keys-1) and page._is_leaf() is False:
+            return True
+        return False
 
     def __str__(self):
 
