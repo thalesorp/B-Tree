@@ -49,9 +49,13 @@ class BTree():
         self.root = self.root.insert(page)
 
     def search(self, key):
+        ''' Depth search algorithm.'''
+
         return self.root.search(key)
 
     def delete(self, key):
+        ''' Delete the "key" from the tree.'''
+
         self.root.delete(key)
 
     def show(self):
@@ -186,7 +190,7 @@ class Page():
         return self
 
     def search(self, key):
-        # Depth search algorithm.
+        ''' Depth search algorithm.'''
 
         if key in self.keys:
             # If the sought key is in current page.
@@ -204,10 +208,10 @@ class Page():
                 if self.pages[page_index].search(key) is True:
                     return True
 
-        # If there's a left page, go there.
+        # If there's a right page, go there.
         if self._has_page(self.RIGHT, self.keys[i]):
             page_index = self._get_page_index(self.RIGHT, self.keys[i])
-            # If finds it, return True. Else, keep searching.
+            # If finds it, return True.
             if self.pages[page_index].search(key) is True:
                 return True
 
@@ -215,25 +219,52 @@ class Page():
         return False
 
     def delete(self, key):
+        ''' Delete the "key" from the current page, or children pages.'''
 
-        if key in self.keys and self._is_leaf():
-            self.keys.remove(key)
-        return True
+        if key in self.keys:
+            if self._is_leaf():
+                # Actually removing the key from the keys list.
+                self.keys.remove(key)
+                self._shift(self.LEFT)
+                return True
+            else:
+                # ???
+                return True
 
-    def _shift(self, side, key):
+        for i in range(self.n_keys):
+
+            # If there's a left page, go there.
+            if self._has_page(self.LEFT, self.keys[i]):
+                page_index = self._get_page_index(self.LEFT, self.keys[i])
+                # If has already deleted, return True. Else, keep searching.
+                if self.pages[page_index].delete(key) is True:
+                    return True
+
+        # If there's a right page, go there.
+        if self._has_page(self.RIGHT, self.keys[i]):
+            page_index = self._get_page_index(self.RIGHT, self.keys[i])
+            # If has already deleted, return True.
+            if self.pages[page_index].delete(key) is True:
+                return True
+
+        # If the key wasn't found, it's because current tree doesn't have it.
+        return False
+
+    def _shift(self, side, key=None):
         ''' Shift to "side" the elements after "key", with "key" included.'''
 
         if side == self.RIGHT and key is None:
             return False
 
+        key_index = self.keys.index(key) # TODO: WARNING! Doing this before removing None from keys list.
+
         # Removing the first occurence of None from keys list.
         self.keys.remove(None)
 
-        # Now putting the None in the last position.
+        # Now putting the None in the correct position.
         if side == self.LEFT:
             self.keys.append(None)
         if side == self.RIGHT:
-            key_index = self.keys.index(key)
             self.keys = self.keys[:key_index] + [None] + self.keys[key_index:]
 
         # Shifting the pages attached to the non leaf page too.
